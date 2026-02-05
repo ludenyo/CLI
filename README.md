@@ -1,7 +1,5 @@
 # Docker CLI + UI (Go)
 
-Beginner-friendly Go app that lists Docker containers, can start/stop them, and offers a simple terminal UI.
-
 ## Prerequisites
 
 - Go 1.21+
