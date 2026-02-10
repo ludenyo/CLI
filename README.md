@@ -23,6 +23,7 @@ go run . stop <container-id>
 go run . logs <container-id>
 go run . logs <container-id> --tail 50
 go run . inspect <container-id>
+go run . images
 ```
 
 ## UI Usage

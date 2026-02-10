@@ -19,6 +19,12 @@ type ContainerInfo struct {
     Names  []string
 }
 
+type ImageInfo struct {
+    ID       string
+    RepoTags []string
+    Size     int64
+}
+
 func NewDockerClient() (*client.Client, error) {
     return client.NewClientWithOpts(client.FromEnv, client.WithAPIVersionNegotiation())
 }
@@ -60,6 +66,45 @@ func PrintContainers(containers []ContainerInfo) {
             id = id[:12]
         }
         fmt.Printf("ID: %s | Image: %s | Status: %s | Names: %v\n", id, container.Image, container.Status, container.Names)
+    }
+}
+
+func ListImages(ctx context.Context) ([]ImageInfo, error) {
+    cli, err := NewDockerClient()
+    if err != nil {
+        return nil, fmt.Errorf("create docker client: %w", err)
+    }
+    defer cli.Close()
+
+    images, err := cli.ImageList(ctx, types.ImageListOptions{All: true})
+    if err != nil {
+        return nil, fmt.Errorf("list images: %w", err)
+    }
+
+    results := make([]ImageInfo, 0, len(images))
+    for _, image := range images {
+        results = append(results, ImageInfo{
+            ID:       image.ID,
+            RepoTags: image.RepoTags,
+            Size:     image.Size,
+        })
+    }
+
+    return results, nil
+}
+
+func PrintImages(images []ImageInfo) {
+    if len(images) == 0 {
+        fmt.Println("No images found.")
+        return
+    }
+
+    for _, image := range images {
+        id := image.ID
+        if len(id) > 12 {
+            id = id[:12]
+        }
+        fmt.Printf("ID: %s | Tags: %v | Size: %d bytes\n", id, image.RepoTags, image.Size)
     }
 }
 

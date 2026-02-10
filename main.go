@@ -85,6 +85,13 @@ func main() {
 			return
 		}
 		fmt.Println(string(data))
+	case "images":
+		images, err := cmd.ListImages(ctx)
+		if err != nil {
+			fmt.Println("Error:", err)
+			return
+		}
+		cmd.PrintImages(images)
     case "ui":
         if err := cmd.ShowUI(ctx); err != nil {
             fmt.Println("Error:", err)
@@ -101,6 +108,7 @@ func printUsage() {
     fmt.Println("  go run . stop <id>        # Stop container")
 	fmt.Println("  go run . logs <id> [--tail N]  # Show container logs")
 	fmt.Println("  go run . inspect <id>     # Inspect container JSON")
+	fmt.Println("  go run . images           # List Docker images")
     fmt.Println("  go run . ui               # Launch terminal UI")
     fmt.Println("\nList flags:")
     fmt.Println("  --running                 Show only running containers")
