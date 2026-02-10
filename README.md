@@ -15,6 +15,9 @@ go mod tidy
 
 ```bash
 go run . list
+go run . list --running
+go run . list --name redis
+go run . list --json
 go run . start <container-id>
 go run . stop <container-id>
 ```
