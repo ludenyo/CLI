@@ -38,3 +38,8 @@ go run . ui
 - `S` start selected container
 - `T` stop selected container
 - `Q` or `Esc` quit
+
+### UI Layout
+
+- Left pane: container list
+- Right pane: details of selected container (CPU/Memory included)

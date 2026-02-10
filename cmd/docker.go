@@ -3,6 +3,7 @@ package cmd
 import (
     "bytes"
     "context"
+    "encoding/json"
     "fmt"
     "time"
 
@@ -23,6 +24,13 @@ type ImageInfo struct {
     ID       string
     RepoTags []string
     Size     int64
+}
+
+type ContainerStats struct {
+    CPUPercent    float64
+    MemoryUsage   uint64
+    MemoryLimit   uint64
+    MemoryPercent float64
 }
 
 func NewDockerClient() (*client.Client, error) {
@@ -178,4 +186,45 @@ func InspectContainer(ctx context.Context, containerID string) (types.ContainerJ
     }
 
     return info, nil
+}
+
+func GetContainerStats(ctx context.Context, containerID string) (ContainerStats, error) {
+    cli, err := NewDockerClient()
+    if err != nil {
+        return ContainerStats{}, fmt.Errorf("create docker client: %w", err)
+    }
+    defer cli.Close()
+
+    stats, err := cli.ContainerStats(ctx, containerID, false)
+    if err != nil {
+        return ContainerStats{}, fmt.Errorf("fetch stats: %w", err)
+    }
+    defer stats.Body.Close()
+
+    var payload types.StatsJSON
+    decoder := json.NewDecoder(stats.Body)
+    if err := decoder.Decode(&payload); err != nil {
+        return ContainerStats{}, fmt.Errorf("decode stats: %w", err)
+    }
+
+    cpuDelta := float64(payload.CPUStats.CPUUsage.TotalUsage - payload.PreCPUStats.CPUUsage.TotalUsage)
+    systemDelta := float64(payload.CPUStats.SystemUsage - payload.PreCPUStats.SystemUsage)
+    var cpuPercent float64
+    if systemDelta > 0 && cpuDelta > 0 {
+        cpuPercent = (cpuDelta / systemDelta) * float64(len(payload.CPUStats.CPUUsage.PercpuUsage)) * 100.0
+    }
+
+    memoryUsage := payload.MemoryStats.Usage
+    memoryLimit := payload.MemoryStats.Limit
+    var memoryPercent float64
+    if memoryLimit > 0 {
+        memoryPercent = (float64(memoryUsage) / float64(memoryLimit)) * 100.0
+    }
+
+    return ContainerStats{
+        CPUPercent:    cpuPercent,
+        MemoryUsage:   memoryUsage,
+        MemoryLimit:   memoryLimit,
+        MemoryPercent: memoryPercent,
+    }, nil
 }
