@@ -1,6 +1,7 @@
 package cmd
 
 import (
+    "bytes"
     "context"
     "fmt"
     "time"
@@ -8,6 +9,7 @@ import (
     "github.com/docker/docker/api/types"
     "github.com/docker/docker/api/types/container"
     "github.com/docker/docker/client"
+    "github.com/docker/docker/pkg/stdcopy"
 )
 
 type ContainerInfo struct {
@@ -88,4 +90,47 @@ func StopContainer(ctx context.Context, containerID string) error {
     }
 
     return nil
+}
+
+func FetchContainerLogs(ctx context.Context, containerID string, tail string) (string, error) {
+    cli, err := NewDockerClient()
+    if err != nil {
+        return "", fmt.Errorf("create docker client: %w", err)
+    }
+    defer cli.Close()
+
+    options := types.ContainerLogsOptions{
+        ShowStdout: true,
+        ShowStderr: true,
+        Tail:       tail,
+    }
+    reader, err := cli.ContainerLogs(ctx, containerID, options)
+    if err != nil {
+        return "", fmt.Errorf("fetch logs: %w", err)
+    }
+    defer reader.Close()
+
+    var stdout bytes.Buffer
+    var stderr bytes.Buffer
+    if _, err := stdcopy.StdCopy(&stdout, &stderr, reader); err != nil {
+        return "", fmt.Errorf("read logs: %w", err)
+    }
+
+    combined := append(stdout.Bytes(), stderr.Bytes()...)
+    return string(combined), nil
+}
+
+func InspectContainer(ctx context.Context, containerID string) (types.ContainerJSON, error) {
+    cli, err := NewDockerClient()
+    if err != nil {
+        return types.ContainerJSON{}, fmt.Errorf("create docker client: %w", err)
+    }
+    defer cli.Close()
+
+    info, err := cli.ContainerInspect(ctx, containerID)
+    if err != nil {
+        return types.ContainerJSON{}, fmt.Errorf("inspect container: %w", err)
+    }
+
+    return info, nil
 }

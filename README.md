@@ -20,6 +20,9 @@ go run . list --name redis
 go run . list --json
 go run . start <container-id>
 go run . stop <container-id>
+go run . logs <container-id>
+go run . logs <container-id> --tail 50
+go run . inspect <container-id>
 ```
 
 ## UI Usage

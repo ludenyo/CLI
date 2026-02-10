@@ -54,6 +54,37 @@ func main() {
         if err := cmd.StopContainer(ctx, os.Args[2]); err != nil {
             fmt.Println("Error:", err)
         }
+	case "logs":
+		logsFlags := flag.NewFlagSet("logs", flag.ExitOnError)
+		tail := logsFlags.String("tail", "100", "Number of lines to show")
+		_ = logsFlags.Parse(os.Args[2:])
+		args := logsFlags.Args()
+		if len(args) < 1 {
+			fmt.Println("Please provide a container ID.")
+			return
+		}
+		output, err := cmd.FetchContainerLogs(ctx, args[0], *tail)
+		if err != nil {
+			fmt.Println("Error:", err)
+			return
+		}
+		fmt.Println(output)
+	case "inspect":
+		if len(os.Args) < 3 {
+			fmt.Println("Please provide a container ID.")
+			return
+		}
+		info, err := cmd.InspectContainer(ctx, os.Args[2])
+		if err != nil {
+			fmt.Println("Error:", err)
+			return
+		}
+		data, err := json.MarshalIndent(info, "", "  ")
+		if err != nil {
+			fmt.Println("Error:", err)
+			return
+		}
+		fmt.Println(string(data))
     case "ui":
         if err := cmd.ShowUI(ctx); err != nil {
             fmt.Println("Error:", err)
@@ -68,6 +99,8 @@ func printUsage() {
     fmt.Println("  go run . list [flags]     # List containers")
     fmt.Println("  go run . start <id>       # Start container")
     fmt.Println("  go run . stop <id>        # Stop container")
+	fmt.Println("  go run . logs <id> [--tail N]  # Show container logs")
+	fmt.Println("  go run . inspect <id>     # Inspect container JSON")
     fmt.Println("  go run . ui               # Launch terminal UI")
     fmt.Println("\nList flags:")
     fmt.Println("  --running                 Show only running containers")
