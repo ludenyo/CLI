@@ -9,15 +9,31 @@ import (
     "github.com/rivo/tview"
 )
 
+type UITheme struct {
+    FooterColor string
+    StatusColor string
+    AccentColor string
+}
+
 func ShowUI(ctx context.Context) error {
+    return ShowUIWithTheme(ctx, UITheme{})
+}
+
+func ShowUIWithTheme(ctx context.Context, theme UITheme) error {
+    theme = normalizeTheme(theme)
+
     app := tview.NewApplication()
     list := tview.NewList().ShowSecondaryText(false)
     details := tview.NewTextView().SetDynamicColors(true)
     details.SetBorder(true).SetTitle("Details")
+    details.SetBorderColor(tcell.GetColor(theme.AccentColor))
+    details.SetTitleColor(tcell.GetColor(theme.AccentColor))
     footer := tview.NewTextView().SetTextAlign(tview.AlignCenter)
     footer.SetText("R=refresh | S=start | T=stop | Q=quit")
+    footer.SetTextColor(tcell.GetColor(theme.FooterColor))
     status := tview.NewTextView().SetTextAlign(tview.AlignLeft)
     status.SetText("Ready")
+    status.SetTextColor(tcell.GetColor(theme.StatusColor))
 
     type listItem struct {
         id string
@@ -140,6 +156,26 @@ func ShowUI(ctx context.Context) error {
         AddItem(footer, 1, 0, false)
 
     return app.SetRoot(layout, true).Run()
+}
+
+func normalizeTheme(theme UITheme) UITheme {
+    defaults := UITheme{
+        FooterColor: "white",
+        StatusColor: "white",
+        AccentColor: "yellow",
+    }
+
+    if theme.FooterColor == "" {
+        theme.FooterColor = defaults.FooterColor
+    }
+    if theme.StatusColor == "" {
+        theme.StatusColor = defaults.StatusColor
+    }
+    if theme.AccentColor == "" {
+        theme.AccentColor = defaults.AccentColor
+    }
+
+    return theme
 }
 
 func formatBytes(value uint64) string {

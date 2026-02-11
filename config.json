@@ -1,0 +1,13 @@
+{
+  "list": {
+    "running": false,
+    "name": "",
+    "json": false,
+    "logsTail": "100"
+  },
+  "ui": {
+    "footerColor": "white",
+    "statusColor": "white",
+    "accentColor": "yellow"
+  }
+}

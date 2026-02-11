@@ -13,6 +13,8 @@ import (
 
 func main() {
     ctx := context.Background()
+    cfg := loadConfig("config.json")
+
     if len(os.Args) < 2 {
         printUsage()
         return
@@ -21,9 +23,9 @@ func main() {
     switch os.Args[1] {
     case "list":
         listFlags := flag.NewFlagSet("list", flag.ExitOnError)
-        runningOnly := listFlags.Bool("running", false, "Show running containers only")
-        nameFilter := listFlags.String("name", "", "Filter containers by name or image")
-        jsonOutput := listFlags.Bool("json", false, "Output JSON")
+        runningOnly := listFlags.Bool("running", cfg.List.Running, "Show running containers only")
+        nameFilter := listFlags.String("name", cfg.List.Name, "Filter containers by name or image")
+        jsonOutput := listFlags.Bool("json", cfg.List.JSON, "Output JSON")
         _ = listFlags.Parse(os.Args[2:])
 
         containers, err := cmd.ListContainers(ctx)
@@ -38,6 +40,7 @@ func main() {
             return
         }
         cmd.PrintContainers(filtered)
+
     case "start":
         if len(os.Args) < 3 {
             fmt.Println("Please provide a container ID.")
@@ -46,6 +49,7 @@ func main() {
         if err := cmd.StartContainer(ctx, os.Args[2]); err != nil {
             fmt.Println("Error:", err)
         }
+
     case "stop":
         if len(os.Args) < 3 {
             fmt.Println("Please provide a container ID.")
@@ -54,48 +58,58 @@ func main() {
         if err := cmd.StopContainer(ctx, os.Args[2]); err != nil {
             fmt.Println("Error:", err)
         }
-	case "logs":
-		logsFlags := flag.NewFlagSet("logs", flag.ExitOnError)
-		tail := logsFlags.String("tail", "100", "Number of lines to show")
-		_ = logsFlags.Parse(os.Args[2:])
-		args := logsFlags.Args()
-		if len(args) < 1 {
-			fmt.Println("Please provide a container ID.")
-			return
-		}
-		output, err := cmd.FetchContainerLogs(ctx, args[0], *tail)
-		if err != nil {
-			fmt.Println("Error:", err)
-			return
-		}
-		fmt.Println(output)
-	case "inspect":
-		if len(os.Args) < 3 {
-			fmt.Println("Please provide a container ID.")
-			return
-		}
-		info, err := cmd.InspectContainer(ctx, os.Args[2])
-		if err != nil {
-			fmt.Println("Error:", err)
-			return
-		}
-		data, err := json.MarshalIndent(info, "", "  ")
-		if err != nil {
-			fmt.Println("Error:", err)
-			return
-		}
-		fmt.Println(string(data))
-	case "images":
-		images, err := cmd.ListImages(ctx)
-		if err != nil {
-			fmt.Println("Error:", err)
-			return
-		}
-		cmd.PrintImages(images)
+
+    case "logs":
+        logsFlags := flag.NewFlagSet("logs", flag.ExitOnError)
+        tail := logsFlags.String("tail", cfg.List.LogsTail, "Number of lines to show")
+        _ = logsFlags.Parse(os.Args[2:])
+        args := logsFlags.Args()
+        if len(args) < 1 {
+            fmt.Println("Please provide a container ID.")
+            return
+        }
+        output, err := cmd.FetchContainerLogs(ctx, args[0], *tail)
+        if err != nil {
+            fmt.Println("Error:", err)
+            return
+        }
+        fmt.Println(output)
+
+    case "inspect":
+        if len(os.Args) < 3 {
+            fmt.Println("Please provide a container ID.")
+            return
+        }
+        info, err := cmd.InspectContainer(ctx, os.Args[2])
+        if err != nil {
+            fmt.Println("Error:", err)
+            return
+        }
+        data, err := json.MarshalIndent(info, "", "  ")
+        if err != nil {
+            fmt.Println("Error:", err)
+            return
+        }
+        fmt.Println(string(data))
+
+    case "images":
+        images, err := cmd.ListImages(ctx)
+        if err != nil {
+            fmt.Println("Error:", err)
+            return
+        }
+        cmd.PrintImages(images)
+
     case "ui":
-        if err := cmd.ShowUI(ctx); err != nil {
+        theme := cmd.UITheme{
+            FooterColor: cfg.UI.FooterColor,
+            StatusColor: cfg.UI.StatusColor,
+            AccentColor: cfg.UI.AccentColor,
+        }
+        if err := cmd.ShowUIWithTheme(ctx, theme); err != nil {
             fmt.Println("Error:", err)
         }
+
     default:
         printUsage()
     }
@@ -103,17 +117,17 @@ func main() {
 
 func printUsage() {
     fmt.Println("Usage:")
-    fmt.Println("  go run . list [flags]     # List containers")
-    fmt.Println("  go run . start <id>       # Start container")
-    fmt.Println("  go run . stop <id>        # Stop container")
-	fmt.Println("  go run . logs <id> [--tail N]  # Show container logs")
-	fmt.Println("  go run . inspect <id>     # Inspect container JSON")
-	fmt.Println("  go run . images           # List Docker images")
-    fmt.Println("  go run . ui               # Launch terminal UI")
+    fmt.Println("  go run . list [flags]          # List containers")
+    fmt.Println("  go run . start <id>            # Start container")
+    fmt.Println("  go run . stop <id>             # Stop container")
+    fmt.Println("  go run . logs <id> [--tail N]  # Show container logs")
+    fmt.Println("  go run . inspect <id>          # Inspect container JSON")
+    fmt.Println("  go run . images                # List Docker images")
+    fmt.Println("  go run . ui                    # Launch terminal UI")
     fmt.Println("\nList flags:")
-    fmt.Println("  --running                 Show only running containers")
-    fmt.Println("  --name <text>             Filter by name or image")
-    fmt.Println("  --json                    Output JSON")
+    fmt.Println("  --running                      Show only running containers")
+    fmt.Println("  --name <text>                  Filter by name or image")
+    fmt.Println("  --json                         Output JSON")
 }
 
 func filterContainers(containers []cmd.ContainerInfo, runningOnly bool, nameFilter string) []cmd.ContainerInfo {

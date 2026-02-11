@@ -16,6 +16,17 @@ Beginner-friendly Go app that lists Docker containers, interacts with them, and 
 - Split view: container list + details pane
 - Details include CPU & memory stats (human-readable)
 - Actions: refresh, start, stop, quit
+- Configurable UI colors via `config.json`
+
+### Build & Release
+- `Makefile` with simple commands
+- Local binary build
+- Cross-platform release binaries (macOS/Linux/Windows)
+
+### Config Defaults
+- Save default list filters
+- Save default logs tail value
+- Save UI theme colors
 
 ## Prerequisites
 
@@ -27,6 +38,32 @@ Beginner-friendly Go app that lists Docker containers, interacts with them, and 
 ```bash
 go mod tidy
 ```
+
+## Configuration (`config.json`)
+
+The app loads defaults from `config.json` (if missing, safe defaults are used).
+
+```json
+{
+  "list": {
+    "running": false,
+    "name": "",
+    "json": false,
+    "logsTail": "100"
+  },
+  "ui": {
+    "footerColor": "white",
+    "statusColor": "white",
+    "accentColor": "yellow"
+  }
+}
+```
+
+### Config behavior
+- `list.running`, `list.name`, `list.json` are used as default values for `list` flags.
+- `list.logsTail` is used as default for `logs --tail`.
+- `ui.*Color` sets UI colors (footer, status, details border/title accent).
+- CLI flags still override config values.
 
 ## CLI Usage
 
@@ -68,22 +105,43 @@ go run . ui
 - Left pane: container list
 - Right pane: details of selected container (CPU/Memory included)
 
+## Build & Release (KISS)
+
+Use the included `Makefile`:
+
+```bash
+# Format code
+make fmt
+
+# Build local binary (./cli)
+make build
+
+# Build cross-platform binaries in ./dist
+make release
+
+# Clean build artifacts
+make clean
+```
+
+### Release outputs
+
+`make release` creates:
+- `dist/cli-darwin-amd64`
+- `dist/cli-darwin-arm64`
+- `dist/cli-linux-amd64`
+- `dist/cli-windows-amd64.exe`
+
 ## Project Structure
 
 ```
 .
+├── config.go        # Config models + loader
+├── config.json      # Default app config
 ├── cmd/
 │   ├── docker.go   # Docker SDK helpers
-│   └── ui.go       # Terminal UI
+│   └── ui.go       # Terminal UI + theme support
+├── Makefile         # Build/release helpers
 ├── main.go         # CLI entrypoint
 ├── go.mod
 └── README.md
 ```
-
-## Ideas for Next Steps
-
-- Auto-refresh stats in UI
-- UI search/filter box
-- Remove containers/images with confirmation
-- Export output to CSV
-- Build binary with Makefile
